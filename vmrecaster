@@ -1,0 +1,226 @@
+#!/usr/bin/env python
+import sys
+if sys.version_info < (2, 4):
+    print "Your python interpreter is too old. Please consider upgrading."
+    sys.exit(1)
+
+import os
+import logging
+import optparse
+import hashlib
+import datetime
+try:
+    import simplejson as json
+except:
+    import json
+import time
+import datetime
+
+import time
+import subprocess
+
+
+
+time_format_definition = "%Y-%m-%dT%H:%M:%SZ"
+
+
+EnvEvent = set(['VMCATCHER_EVENT_TYPE',
+    'VMCATCHER_EVENT_DC_DESCRIPTION',
+    'VMCATCHER_EVENT_DC_IDENTIFIER',
+    'VMCATCHER_EVENT_DC_TITLE',
+    'VMCATCHER_EVENT_HV_HYPERVISOR',
+    'VMCATCHER_EVENT_HV_FORMAT',
+    'VMCATCHER_EVENT_HV_SIZE',
+    'VMCATCHER_EVENT_HV_URI',
+    'VMCATCHER_EVENT_SL_ARCH',
+    'VMCATCHER_EVENT_SL_CHECKSUM_SHA512',
+    'VMCATCHER_EVENT_SL_COMMENTS',
+    'VMCATCHER_EVENT_SL_OS',
+    'VMCATCHER_EVENT_SL_OSVERSION',
+    'VMCATCHER_EVENT_TYPE',
+    'VMCATCHER_EVENT_FILENAME'])
+    
+EnvConf = set(['VMCATCHER_RDBMS',
+    'VMCATCHER_CACHE_EVENT',
+    'VMCATCHER_LOG_CONF',
+    'VMCATCHER_DIR_CERT',
+    'VMCATCHER_CACHE_DIR_CACHE',
+    'VMCATCHER_CACHE_DIR_DOWNLOAD',
+    'VMCATCHER_CACHE_DIR_EXPIRE'])
+
+EnvConfInteresting = EnvEvent.union(EnvConf)
+
+def runcommand(cmd = "voms-proxy-info  --all",timeout=0, cwd =None):
+    process = subprocess.Popen([cmd], shell=True, cwd = cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    processRc = None
+    handleprocess = True
+    counter = 0
+    stdout = ''
+    stderr = ''
+    while handleprocess:
+        counter += 1
+        time.sleep(1)
+        cout,cerr = process.communicate()
+        stdout += cout
+        stderr += cerr
+        process.poll()
+        processRc = process.returncode
+        if processRc != None:
+            break
+        if counter == timeout:
+            os.kill(process.pid, signal.SIGQUIT)
+        if counter > timeout:
+            os.kill(process.pid, signal.SIGKILL)
+            processRc = -9
+            break
+    return processRc , stdout, stderr
+    
+
+uuidtrwawnsform = {
+'aa7016b0-6508-41d2-bce0-c1724cb3d3e2' : '16ea5937-c8f4-4754-8376-f898b12de731',
+'aa42ca85-179b-4873-b12e-32d549bf02b6' : '016fc535-f946-4473-98b2-5075a4e2e015',
+}
+
+
+
+
+
+
+def generateEnvDict(enviromentDict = os.environ):
+    FoundEnviroment = {}
+    for key in EnvConfInteresting:
+        if key in enviromentDict.keys():
+            FoundEnviroment[key] = enviromentDict[key]
+    return FoundEnviroment
+
+def nullEnvDict(enviromentDict = generateEnvDict(),NullValue = ""):
+    FoundEnviroment = enviromentDict.copy()
+    enviromentKeysSet = set(FoundEnviroment.keys())
+    missing = EnvConfInteresting.difference(enviromentKeysSet)
+    for item in missing:
+        FoundEnviroment[item] = NullValue
+    return FoundEnviroment
+
+
+
+def getImageDetails(uuid):
+    log = logging.getLogger("getImageDetails")
+    cmd = """vmcaster \
+    --show-image \
+    --select-image %s""" % (
+        uuid
+    )
+    
+    log.info("Attempting '%s'" % (cmd))
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("Failed Running command:%s" % (cmd))
+        if len(stdout) > 0:
+            log.info("stdout:%s" % (stdout))
+        if len(stderr) > 0:
+            log.info("stderr:%s" % (stderr))
+        return None
+    return stdout
+
+def handleEvent():
+    log = logging.getLogger("handleEvent")
+    
+    uuidKey = 'VMCATCHER_EVENT_DC_IDENTIFIER'
+    if not uuidKey in os.environ.keys():
+        log.error("no VMCATCHER_EVENT_DC_IDENTIFIER")
+        return False
+    uuidInput = os.environ[uuidKey]
+    cacheDirKey = 'VMCATCHER_CACHE_DIR_CACHE'
+    if not cacheDirKey in os.environ.keys():
+        log.error("no VMCATCHER_CACHE_DIR_CACHE")
+        return False
+    cacheDir = os.environ[cacheDirKey]
+    cacheFileNameKey = 'VMCATCHER_EVENT_FILENAME'
+    if not cacheFileNameKey in os.environ.keys():
+        log.error("no VMCATCHER_EVENT_FILENAME")
+        return False
+    cacheFileName = os.environ[cacheFileNameKey]
+    if not uuidInput in uuidtrwawnsform.keys():
+        log.info("not important uuid")
+        return True
+    uuid = uuidtrwawnsform[uuidInput]
+    cacheFileName = os.environ[cacheFileNameKey]
+    matchingfiles = "%s/%s" % (cacheDir,cacheFileName)
+    print matchingfiles
+    
+    
+    imagedetailsBefore = getImageDetails(uuid)
+    
+    
+    cmd = """vmcaster \
+    --upload-image %s \
+    --select-image %s""" % (
+        matchingfiles,
+        uuid
+    )
+    
+    log.info("Attempting '%s'" % (cmd))
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("Failed Running command:%s" % (cmd))
+    if len(stdout) > 0:
+        log.info("stdout:%s" % (stdout))
+    if len(stderr) > 0:
+        log.info("stderr:%s" % (stderr))
+    
+    imagedetailsAfter = getImageDetails(uuid)
+    
+    if imagedetailsBefore == imagedetailsAfter:
+        log.info("Image unchanged")
+        return
+    
+    
+    
+    output = stdout + stderr
+    print cmd
+    with open("/tmp/dingf", "a") as myfile:
+            myfile.write(output)
+            myfile.write('\n')
+
+
+def main():
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
+    log = logging.getLogger("main")
+    p = optparse.OptionParser(version = "%prog " + "0.0.1")    
+    p.add_option('--output_file', action ='store',help='Output file to log event.', metavar='OUTPUT_LOGFILE')
+    p.add_option('--generator',  action ='store',help='Set the dictionary Generator.', metavar='minium')
+    p.add_option('--datetime',  action ='store_true',help='Add a datetime stamp.')
+    
+    p.add_option('--logcfg', action ='store',help='Logfile configuration file.', metavar='LOGCFGFILE')
+    
+    options, arguments = p.parse_args()
+    if options.logcfg:
+        if os.path.isfile(str(options.logfile)):
+            logging.config.fileConfig(options.logfile)
+        else:
+            logging.basicConfig(level=logging.INFO)
+            log = logging.getLogger("main")
+            log.error("Logfile configuration file '%s' was not found." % (options.logfile))
+            sys.exit(1)
+    else:
+        logging.basicConfig(level=logging.INFO)    
+    outputDict = None
+    generator = nullEnvDict()
+    if options.generator:
+        if options.generator == "minium":
+            generator = generateEnvDict()
+    if options.datetime:
+        generator['DATETIME'] = datetime.datetime.now().strftime(time_format_definition)
+    if options.output_file:
+        with open(options.output_file, "a") as myfile:
+            json.dump(generator, myfile, sort_keys=True)
+            myfile.write('\n')
+    handleEvent()
+    log.error("output")
+    
+    
+if __name__ == "__main__":
+    
+    main()
+

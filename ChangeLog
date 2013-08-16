@@ -1,0 +1,4 @@
+vmrecaster_0.0.3
+
+ * added listening for VMCATCHER_EVENT_UUID_SESSION 
+ * short versions of --verbose --quiet

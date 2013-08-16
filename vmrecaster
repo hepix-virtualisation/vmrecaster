@@ -23,7 +23,7 @@ import subprocess
 
 time_format_definition = "%Y-%m-%dT%H:%M:%SZ"
 
-
+EnvEventType = ['']
 EnvEvent = set(['VMCATCHER_EVENT_TYPE',
     'VMCATCHER_EVENT_DC_DESCRIPTION',
     'VMCATCHER_EVENT_DC_IDENTIFIER',
@@ -46,7 +46,8 @@ EnvConf = set(['VMCATCHER_RDBMS',
     'VMCATCHER_DIR_CERT',
     'VMCATCHER_CACHE_DIR_CACHE',
     'VMCATCHER_CACHE_DIR_DOWNLOAD',
-    'VMCATCHER_CACHE_DIR_EXPIRE'])
+    'VMCATCHER_CACHE_DIR_EXPIRE',
+    'VMCATCHER_EVENT_UUID_SESSION'])
 
 EnvConfInteresting = EnvEvent.union(EnvConf)
 
@@ -191,8 +192,8 @@ def main():
     p.add_option('--output_file', action ='store',help='Output file to log event.', metavar='OUTPUT_LOGFILE')
     p.add_option('--generator',  action ='store',help='Set the dictionary Generator.', metavar='minium')
     p.add_option('--datetime',  action ='store_true',help='Add a datetime stamp.')
-    p.add_option('--verbose', action ='count',help='Change global log level, increasing log output.', metavar='LOGFILE')
-    p.add_option('--quiet', action ='count',help='Change global log level, decreasing log output.', metavar='LOGFILE')
+    p.add_option('-v','--verbose', action ='count',help='Change global log level, increasing log output.', metavar='LOGFILE')
+    p.add_option('-q','--quiet', action ='count',help='Change global log level, decreasing log output.', metavar='LOGFILE')
     p.add_option('--logcfg', action ='store',help='Logfile configuration file.', metavar='CFG_LOGFILE')
     options, arguments = p.parse_args()
     

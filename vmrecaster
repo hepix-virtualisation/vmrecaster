@@ -193,8 +193,7 @@ def main():
     p.add_option('--datetime',  action ='store_true',help='Add a datetime stamp.')
     p.add_option('--verbose', action ='count',help='Change global log level, increasing log output.', metavar='LOGFILE')
     p.add_option('--quiet', action ='count',help='Change global log level, decreasing log output.', metavar='LOGFILE')
-    p.add_option('-C', '--config-file', action ='store',help='Configuration file.', metavar='CFG_FILE')
-    
+    p.add_option('--logcfg', action ='store',help='Logfile configuration file.', metavar='CFG_LOGFILE')
     options, arguments = p.parse_args()
     
     # Set up log file
@@ -221,7 +220,7 @@ def main():
         LoggingLevel = logging.FATAL
     if LoggingLevelCounter >= 5:
         LoggingLevel = logging.CRITICAL
-    
+    logFile = None
     if options.logcfg:
         logFile = options.logcfg
     if logFile != None:
@@ -248,7 +247,7 @@ def main():
             json.dump(generator, myfile, sort_keys=True)
             myfile.write('\n')
     handleEvent()
-    log.error("output")
+    log.debug("Finished")
     
     
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ time_format_definition = "%Y-%m-%dT%H:%M:%SZ"
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
+import datetime
 
 
 EnvEventType = ['']
@@ -265,10 +265,12 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        
         return 0
 
 
     def fuctProcessPrefix(self):
+        log = logging.getLogger("fuctProcessPrefix")
         RequiredEnv = [
                 "VMCATCHER_EVENT_UUID_SESSION",
             ]
@@ -278,9 +280,21 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        session = self.SessionFactory()
+        qrySession = session.query(recastdb.Session).\
+            filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
+        countSession = int(qrySession.count())
+        if countSession != 0:
+            log.error("Session %s already happened" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
+            return 3
+        now = datetime.datetime.utcnow()
+        eventSession = recastdb.Session(uuid=NeededEvents["VMCATCHER_EVENT_UUID_SESSION"],created=now)
+        session.add(eventSession)
+        session.commit()
         return 0
 
     def fuctProcessPostfix(self):
+        log = logging.getLogger("fuctProcessPostfix")
         RequiredEnv = [
                 "VMCATCHER_EVENT_UUID_SESSION",
             ]
@@ -290,6 +304,19 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        session = self.SessionFactory()
+        qrySession = session.query(recastdb.Session).\
+            filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
+        countSession = int(qrySession.count())
+        if countSession == 0:
+            log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
+            return 3
+        thisEventSession = qrySession.one()
+        #now = datetime.datetime.utcnow()
+        #runtime = (now - thisEventSession.created)
+        print thisEventSession.id
+        session.delete(thisEventSession)
+        session.commit()
         return 0
 
 

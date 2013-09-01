@@ -19,9 +19,17 @@ import datetime
 import time
 import subprocess
 
+from VmRecast.__version__ import version
 
+import VmRecast.recastDb as recastdb
 
 time_format_definition = "%Y-%m-%dT%H:%M:%SZ"
+
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+
 
 EnvEventType = ['']
 EnvEvent = set(['VMCATCHER_EVENT_TYPE',
@@ -125,11 +133,13 @@ def getImageDetails(uuid):
 
 def handleEvent():
     log = logging.getLogger("handleEvent")
+    eventKey = ''
     
     uuidKey = 'VMCATCHER_EVENT_DC_IDENTIFIER'
     if not uuidKey in os.environ.keys():
         log.error("no VMCATCHER_EVENT_DC_IDENTIFIER")
         return False
+        
     uuidInput = os.environ[uuidKey]
     cacheDirKey = 'VMCATCHER_CACHE_DIR_CACHE'
     if not cacheDirKey in os.environ.keys():
@@ -184,11 +194,111 @@ def handleEvent():
             myfile.write('\n')
 
 
+def checkEnvToDict(RequiredEnv):
+    log = logging.getLogger("minenv")
+    output = {}
+    for envKey in RequiredEnv:
+        if not envKey in os.environ.keys():
+            log.error("no %s enviroment variable." % (envKey))
+            return None
+        output[envKey] = os.environ[envKey]
+    return output
+
+
+class handler():
+
+    def initDb(self):
+        if self.databaseConnectionString == None:
+            return False
+        self.engine = create_engine(self.databaseConnectionString, echo=False)
+        recastdb.init(self.engine)
+        self.SessionFactory = sessionmaker(bind=self.engine)
+        return True
+        
+    def fuctAvailablePrefix(self):
+        RequiredEnv = [
+                "VMCATCHER_EVENT_UUID_SESSION",
+                "VMCATCHER_EVENT_DC_IDENTIFIER",
+            ]
+        NeededEvents = checkEnvToDict(RequiredEnv)
+        if NeededEvents == None:
+            return 1
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        return 0
+
+    def fuctAvailablePostfix(self):
+        RequiredEnv = [
+                "VMCATCHER_EVENT_UUID_SESSION",
+                "VMCATCHER_EVENT_DC_IDENTIFIER",
+            ]
+        NeededEvents = checkEnvToDict(RequiredEnv)
+        if NeededEvents == None:
+            return 1
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        return 0
+
+    def fuctExpirePrefix(self):
+        RequiredEnv = [
+                "VMCATCHER_EVENT_UUID_SESSION",
+                "VMCATCHER_EVENT_DC_IDENTIFIER",
+            ]
+        NeededEvents = checkEnvToDict(RequiredEnv)
+        if NeededEvents == None:
+            return 1
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        return 0
+
+    def fuctExpirePostfix(self):
+        RequiredEnv = [
+                "VMCATCHER_EVENT_UUID_SESSION",
+                "VMCATCHER_EVENT_DC_IDENTIFIER",
+            ]
+        NeededEvents = checkEnvToDict(RequiredEnv)
+        if NeededEvents == None:
+            return 1
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        return 0
+
+
+    def fuctProcessPrefix(self):
+        RequiredEnv = [
+                "VMCATCHER_EVENT_UUID_SESSION",
+            ]
+        NeededEvents = checkEnvToDict(RequiredEnv)
+        if NeededEvents == None:
+            return 1
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        return 0
+
+    def fuctProcessPostfix(self):
+        RequiredEnv = [
+                "VMCATCHER_EVENT_UUID_SESSION",
+            ]
+        NeededEvents = checkEnvToDict(RequiredEnv)
+        if NeededEvents == None:
+            return 1
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        return 0
+
+
 def main():
     reload(sys)
     sys.setdefaultencoding('utf-8')
     log = logging.getLogger("main")
-    p = optparse.OptionParser(version = "%prog " + "0.0.1")    
+    p = optparse.OptionParser(version = "%prog " + version)    
+    p.add_option('-d', '--database', action ='store', help='Database conection string')
     p.add_option('--output_file', action ='store',help='Output file to log event.', metavar='OUTPUT_LOGFILE')
     p.add_option('--generator',  action ='store',help='Set the dictionary Generator.', metavar='minium')
     p.add_option('--datetime',  action ='store_true',help='Add a datetime stamp.')
@@ -197,10 +307,15 @@ def main():
     p.add_option('--logcfg', action ='store',help='Logfile configuration file.', metavar='CFG_LOGFILE')
     options, arguments = p.parse_args()
     
+    databaseConnectionString = None
+    
+    if 'VMRECASTER_RDBMS' in os.environ:
+        databaseConnectionString = os.environ['VMRECASTER_RDBMS']
+    
     # Set up log file
     
     LoggingLevel = logging.WARNING
-    LoggingLevelCounter = 2
+    LoggingLevelCounter = 3
     if options.verbose:
         LoggingLevelCounter = LoggingLevelCounter - options.verbose
         if options.verbose == 1:
@@ -247,8 +362,41 @@ def main():
         with open(options.output_file, "a") as myfile:
             json.dump(generator, myfile, sort_keys=True)
             myfile.write('\n')
-    handleEvent()
-    log.debug("Finished")
+    #handleEvent()
+    if options.database:
+        databaseConnectionString = options.database
+    
+    typeKey = 'VMCATCHER_EVENT_TYPE'
+    if not typeKey in os.environ.keys():
+        log.error("no VMCATCHER_EVENT_DC_IDENTIFIER enviroment variable.")
+        return False
+    sessionKey = ''
+    eventType = os.environ[typeKey]
+    
+    
+    log.debug("VMCATCHER_EVENT_TYPE=%s" % (eventType))
+    
+    if databaseConnectionString == None:
+        databaseConnectionString = 'sqlite:///vmrecaster.db'
+        log.info("Defaulting DB connection to '%s'" % (databaseConnectionString))
+    processor = handler()
+    functionDict = {
+        "AvailablePrefix" : processor.fuctAvailablePrefix,
+        "AvailablePrefix" : processor.fuctAvailablePrefix,
+        "ExpirePrefix" : processor.fuctExpirePrefix,
+        "ProcessPrefix" : processor.fuctProcessPrefix,
+        "AvailablePostfix" : processor.fuctAvailablePostfix,
+        "ProcessPostfix" : processor.fuctProcessPostfix,
+        "ExpirePostfix" : processor.fuctExpirePostfix,
+        "ExpirePosfix" : processor.fuctExpirePostfix,
+    }
+    processor.databaseConnectionString = databaseConnectionString
+    rc = functionDict[eventType]()
+    
+    log.debug("return code=%s" % (rc))
+    return rc
+    
+    
     
     
 if __name__ == "__main__":

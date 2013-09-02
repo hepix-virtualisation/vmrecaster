@@ -216,6 +216,7 @@ class handler():
         return True
         
     def fuctAvailablePrefix(self):
+        log = logging.getLogger("fuctAvailablePrefix")
         RequiredEnv = [
                 "VMCATCHER_EVENT_UUID_SESSION",
                 "VMCATCHER_EVENT_DC_IDENTIFIER",
@@ -226,9 +227,29 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        # Check for a mapping
+        session = self.SessionFactory()
+        qryMapping  = session.query(recastdb.ImageUuidMapping).\
+            filter(recastdb.ImageUuidMapping.imageUuidSrc == NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"])
+        countMapping = int(qryMapping.count())
+        
+        log.info("nullEnvDict=%s"  % ( nullEnvDict()))
+        if countMapping == 0:
+            log.info("No mapping for:'%s'" % (NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"]))
+            return 0
+        # Check for a session
+        qrySession = session.query(recastdb.Session).\
+            filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
+        countSession = int(qrySession.count())
+        if countSession != 1:
+            log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
+            return 3
+        thisEventSession = qrySession.one()
+        
         return 0
 
     def fuctAvailablePostfix(self):
+        log = logging.getLogger("fuctAvailablePostfix")
         RequiredEnv = [
                 "VMCATCHER_EVENT_UUID_SESSION",
                 "VMCATCHER_EVENT_DC_IDENTIFIER",
@@ -239,9 +260,29 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        # Check for a mapping
+        session = self.SessionFactory()
+        qryMapping  = session.query(recastdb.ImageUuidMapping).\
+            filter(recastdb.ImageUuidMapping.imageUuidSrc == NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"])
+        countMapping = int(qryMapping.count())
+        
+        log.info("nullEnvDict=%s"  % ( nullEnvDict()))
+        if countMapping == 0:
+            log.info("No mapping for:'%s'" % (NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"]))
+            return 0
+        # Check for a session
+        qrySession = session.query(recastdb.Session).\
+            filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
+        countSession = int(qrySession.count())
+        if countSession != 1:
+            log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
+            return 3
+        thisEventSession = qrySession.one()
+        
         return 0
 
     def fuctExpirePrefix(self):
+        log = logging.getLogger("fuctExpirePrefix")
         RequiredEnv = [
                 "VMCATCHER_EVENT_UUID_SESSION",
                 "VMCATCHER_EVENT_DC_IDENTIFIER",
@@ -252,9 +293,29 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        # Check for a mapping
+        session = self.SessionFactory()
+        qryMapping  = session.query(recastdb.ImageUuidMapping).\
+            filter(recastdb.ImageUuidMapping.imageUuidSrc == NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"])
+        countMapping = int(qryMapping.count())
+        
+        log.info("nullEnvDict=%s"  % ( nullEnvDict()))
+        if countMapping == 0:
+            log.info("No mapping for:'%s'" % (NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"]))
+            return 0
+        # Check for a session
+        qrySession = session.query(recastdb.Session).\
+            filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
+        countSession = int(qrySession.count())
+        if countSession != 1:
+            log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
+            return 3
+        thisEventSession = qrySession.one()
+        
         return 0
 
     def fuctExpirePostfix(self):
+        log = logging.getLogger("fuctExpirePostfix")
         RequiredEnv = [
                 "VMCATCHER_EVENT_UUID_SESSION",
                 "VMCATCHER_EVENT_DC_IDENTIFIER",
@@ -265,6 +326,25 @@ class handler():
         dbInitrc = self.initDb()
         if dbInitrc != True:
             return 2
+        # Check for a mapping
+        session = self.SessionFactory()
+        qryMapping  = session.query(recastdb.ImageUuidMapping).\
+            filter(recastdb.ImageUuidMapping.imageUuidSrc == NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"])
+        countMapping = int(qryMapping.count())
+        
+        log.info("nullEnvDict=%s"  % ( nullEnvDict()))
+        if countMapping == 0:
+            log.info("No mapping for:'%s'" % (NeededEvents["VMCATCHER_EVENT_DC_IDENTIFIER"]))
+            return 0
+        # Check for a session
+        qrySession = session.query(recastdb.Session).\
+            filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
+        countSession = int(qrySession.count())
+        if countSession != 1:
+            log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
+            return 3
+        thisEventSession = qrySession.one()
+        
         
         return 0
 
@@ -308,7 +388,7 @@ class handler():
         qrySession = session.query(recastdb.Session).\
             filter(recastdb.Session.uuid == NeededEvents["VMCATCHER_EVENT_UUID_SESSION"])
         countSession = int(qrySession.count())
-        if countSession == 0:
+        if countSession != 1:
             log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
             return 3
         thisEventSession = qrySession.one()
@@ -318,8 +398,33 @@ class handler():
         session.delete(thisEventSession)
         session.commit()
         return 0
+class admin():
 
-
+    def initDb(self):
+        if self.databaseConnectionString == None:
+            return False
+        self.engine = create_engine(self.databaseConnectionString, echo=False)
+        recastdb.init(self.engine)
+        self.SessionFactory = sessionmaker(bind=self.engine)
+        return True
+    def add_map(self,*args, **kwargs):
+        log = logging.getLogger("add_map")
+        mapImageDstUuid = kwargs.get('mapImageDstUuid', None)
+        mapImageListDstUuid = kwargs.get('mapImageListDstUuid', None)
+        mapImageSrcUuid = kwargs.get('mapImageSrcUuid', None)
+        session = self.SessionFactory()
+        qryImageUuidMapping = session.query(recastdb.ImageUuidMapping).\
+            filter(recastdb.ImageUuidMapping.imageUuidDest == mapImageDstUuid)
+        if 0 != qryImageUuidMapping.count():
+            log.error("Map already exists %s" % (qryImageUuidMapping.one()))
+            return 3
+        newmap = recastdb.ImageUuidMapping(
+               imageUuidDest = mapImageDstUuid,
+               imagelistUuidDest = mapImageListDstUuid,
+               imageUuidSrc = mapImageSrcUuid,
+            )
+        session.add(newmap)
+        session.commit()
 def main():
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -332,9 +437,26 @@ def main():
     p.add_option('-v','--verbose', action ='count',help='Change global log level, increasing log output.', metavar='LOGFILE')
     p.add_option('-q','--quiet', action ='count',help='Change global log level, decreasing log output.', metavar='LOGFILE')
     p.add_option('--logcfg', action ='store',help='Logfile configuration file.', metavar='CFG_LOGFILE')
-    options, arguments = p.parse_args()
+    p.add_option('--list-map', action ='store_true',help='add an image mapping.')
+    p.add_option('--add-map', action ='store_true',help='add an image mapping.')
+    p.add_option('--del-map', action ='store_true',help='delete an image mapping.')
+    p.add_option('--map', action ='store',help='select map image')
+    p.add_option('--src', action ='store',help='select source image.')
+    p.add_option('--list', action ='store',help='select map image list.')
     
+    
+    
+    
+    
+    options, arguments = p.parse_args()
+    actions = []
     databaseConnectionString = None
+    mapImageDstUuid = None
+    mapImageListDstUuid = None
+    mapImageSrcUuid = None
+    
+    
+    
     
     if 'VMRECASTER_RDBMS' in os.environ:
         databaseConnectionString = os.environ['VMRECASTER_RDBMS']
@@ -389,41 +511,59 @@ def main():
         with open(options.output_file, "a") as myfile:
             json.dump(generator, myfile, sort_keys=True)
             myfile.write('\n')
+    if options.add_map:
+        actions.append("add_map")
+    if options.src:
+        mapImageSrcUuid = options.src
+    if options.list:
+        mapImageListDstUuid = options.list
+    if options.map:
+        mapImageDstUuid = options.map
     #handleEvent()
     if options.database:
         databaseConnectionString = options.database
     
-    typeKey = 'VMCATCHER_EVENT_TYPE'
-    if not typeKey in os.environ.keys():
-        log.error("no VMCATCHER_EVENT_DC_IDENTIFIER enviroment variable.")
-        return False
-    sessionKey = ''
-    eventType = os.environ[typeKey]
     
-    
-    log.debug("VMCATCHER_EVENT_TYPE=%s" % (eventType))
     
     if databaseConnectionString == None:
         databaseConnectionString = 'sqlite:///vmrecaster.db'
         log.info("Defaulting DB connection to '%s'" % (databaseConnectionString))
-    processor = handler()
-    functionDict = {
-        "AvailablePrefix" : processor.fuctAvailablePrefix,
-        "AvailablePrefix" : processor.fuctAvailablePrefix,
-        "ExpirePrefix" : processor.fuctExpirePrefix,
-        "ProcessPrefix" : processor.fuctProcessPrefix,
-        "AvailablePostfix" : processor.fuctAvailablePostfix,
-        "ProcessPostfix" : processor.fuctProcessPostfix,
-        "ExpirePostfix" : processor.fuctExpirePostfix,
-        "ExpirePosfix" : processor.fuctExpirePostfix,
-    }
-    processor.databaseConnectionString = databaseConnectionString
-    rc = functionDict[eventType]()
-    
-    log.debug("return code=%s" % (rc))
-    return rc
     
     
+    if len(actions) == 0:
+        typeKey = 'VMCATCHER_EVENT_TYPE'
+        if not typeKey in os.environ.keys():
+            log.error("no VMCATCHER_EVENT_DC_IDENTIFIER enviroment variable.")
+            return 1
+        eventType = os.environ[typeKey]
+
+        log.debug("VMCATCHER_EVENT_TYPE=%s" % (eventType))
+        processor = handler()
+        functionDict = {
+            "AvailablePrefix" : processor.fuctAvailablePrefix,
+            "AvailablePrefix" : processor.fuctAvailablePrefix,
+            "ExpirePrefix" : processor.fuctExpirePrefix,
+            "ProcessPrefix" : processor.fuctProcessPrefix,
+            "AvailablePostfix" : processor.fuctAvailablePostfix,
+            "ProcessPostfix" : processor.fuctProcessPostfix,
+            "ExpirePostfix" : processor.fuctExpirePostfix,
+            "ExpirePosfix" : processor.fuctExpirePostfix,
+        }
+        processor.databaseConnectionString = databaseConnectionString
+        rc = functionDict[eventType]()
+
+        log.debug("return code=%s" % (rc))
+        return rc
+    
+    if "add_map" in actions:
+        adminObj = admin()
+        adminObj.databaseConnectionString = databaseConnectionString
+        adminObj.initDb()
+        adminObj.add_map(
+                mapImageDstUuid= mapImageDstUuid,
+                mapImageListDstUuid = mapImageListDstUuid,
+                mapImageSrcUuid = mapImageSrcUuid,
+            )
     
     
 if __name__ == "__main__":

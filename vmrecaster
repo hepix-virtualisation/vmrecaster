@@ -407,8 +407,8 @@ class admin():
         recastdb.init(self.engine)
         self.SessionFactory = sessionmaker(bind=self.engine)
         return True
-    def add_map(self,*args, **kwargs):
-        log = logging.getLogger("add_map")
+    def map_add(self,*args, **kwargs):
+        log = logging.getLogger("map_add")
         mapImageDstUuid = kwargs.get('mapImageDstUuid', None)
         mapImageListDstUuid = kwargs.get('mapImageListDstUuid', None)
         mapImageSrcUuid = kwargs.get('mapImageSrcUuid', None)
@@ -425,6 +425,38 @@ class admin():
             )
         session.add(newmap)
         session.commit()
+        return 0
+    def map_del(self,*args, **kwargs):
+        log = logging.getLogger("map_del")
+        mapImageDstUuid = kwargs.get('mapImageDstUuid', None)
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        session = self.SessionFactory()
+        qryImageUuidMapping = session.query(recastdb.ImageUuidMapping).\
+            filter(recastdb.ImageUuidMapping.imageUuidDest == mapImageDstUuid)
+        count = qryImageUuidMapping.count()
+        if 0 == count:
+            log.error("Map '%s' does not exists." % (mapImageDstUuid))
+            return 6
+        match = qryImageUuidMapping.one()
+        session.delete(match)
+        session.commit()
+        return 0
+        
+        
+    def map_list(self,*args, **kwargs):
+        log = logging.getLogger("map_del")
+        dbInitrc = self.initDb()
+        if dbInitrc != True:
+            return 2
+        session = self.SessionFactory()
+        qryImageUuidMapping = session.query(recastdb.ImageUuidMapping)
+        for item in qryImageUuidMapping:
+            print "%s\t%s\t%s" % (item.imageUuidDest,
+                    item.imageUuidSrc,
+                    item.imagelistUuidDest)
+        
 def main():
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -450,6 +482,7 @@ def main():
     
     options, arguments = p.parse_args()
     actions = []
+    requiredParams = []
     databaseConnectionString = None
     mapImageDstUuid = None
     mapImageListDstUuid = None
@@ -512,7 +545,17 @@ def main():
             json.dump(generator, myfile, sort_keys=True)
             myfile.write('\n')
     if options.add_map:
-        actions.append("add_map")
+        actions.append("map_add")
+        requiredParams.append("map")
+        requiredParams.append("src")
+        requiredParams.append("list")
+        
+    if options.del_map:
+        actions.append("map_del")
+        requiredParams.append("map")
+    if options.list_map:
+        actions.append("map_list")
+    
     if options.src:
         mapImageSrcUuid = options.src
     if options.list:
@@ -555,16 +598,40 @@ def main():
         log.debug("return code=%s" % (rc))
         return rc
     
-    if "add_map" in actions:
-        adminObj = admin()
-        adminObj.databaseConnectionString = databaseConnectionString
-        adminObj.initDb()
-        adminObj.add_map(
-                mapImageDstUuid= mapImageDstUuid,
-                mapImageListDstUuid = mapImageListDstUuid,
-                mapImageSrcUuid = mapImageSrcUuid,
-            )
+    if "map" in requiredParams:
+        if mapImageDstUuid == None:
+            log.error("--map parameter is not set.")
+            return 10
+    if "src" in requiredParams:
+        if mapImageSrcUuid == None:
+            log.error("--src parameter is not set.")
+            return 10
+    if "list" in requiredParams:
+        if mapImageListDstUuid == None:
+            log.error("--list parameter is not set.")
+            return 10
     
+    
+    
+    adminObj = admin()
+    adminObj.databaseConnectionString = databaseConnectionString
+    adminObj.initDb()
+    
+    if "map_add" in actions:
+        rc = adminObj.add_map(mapImageDstUuid = mapImageDstUuid,
+            mapImageListDstUuid = mapImageListDstUuid,
+            mapImageSrcUuid = mapImageSrcUuid,
+        )
+        return rc
+    if "map_del" in actions:
+        rc = adminObj.map_del(mapImageDstUuid = mapImageDstUuid)
+        return rc
+    if "map_list" in actions:
+        rc = adminObj.map_list()
+        return rc
+        
+    
+        
     
 if __name__ == "__main__":
     

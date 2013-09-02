@@ -1,4 +1,5 @@
-version = "0.0.2"
+
+from VmRecast.__version__ import version
 from sys import version_info
 
 
@@ -15,13 +16,14 @@ except:
 
 setup(name='vmrecaster',
     version=version,
-    description="start and stop chroot sessions",
-    long_description="""mount unmoun, kill remaining processes etc""",
+    description="recast images in an image list",
+    long_description="""recast images in an image list""",
     author="O M Synge",
     author_email="owen.synge@desy.de",
     license='Private',
     
     url = 'none',
+    packages = ['VmRecast'],
     classifiers=[
         'Development Status :: 1 - UnStable',
         'Environment :: Console',

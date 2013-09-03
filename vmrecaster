@@ -204,6 +204,18 @@ def checkEnvToDict(RequiredEnv):
         output[envKey] = os.environ[envKey]
     return output
 
+def getEventTypeId(session,EventName):
+    qryEventType = session.query(recastdb.EventType).\
+        filter(recastdb.EventType.name == EventName)
+    EventTypeCount = qryEventType.count()
+    if EventTypeCount == 0:
+        eventType = recastdb.EventType(name = EventName)
+        session.add(eventType)
+        session.commit()
+        qryEventType = session.query(recastdb.EventType).\
+            filter(recastdb.EventType.name == EventName)
+    EventType = qryEventType.one()
+    return EventType.id
 
 class handler():
 
@@ -244,8 +256,17 @@ class handler():
         if countSession != 1:
             log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
             return 3
+        EventTypeId = getEventTypeId(session,"AvailablePrefix")
+        thisMapping = qryMapping.one()
         thisEventSession = qrySession.one()
-        
+        imageEvent = recastdb.ImageEvent(
+                fkSession = thisEventSession.id,
+                fkImageUuidMapping = thisMapping.id,
+                fkType = EventTypeId,
+                created = datetime.datetime.utcnow()
+            )
+        session.add(imageEvent)
+        session.commit()
         return 0
 
     def fuctAvailablePostfix(self):
@@ -277,8 +298,17 @@ class handler():
         if countSession != 1:
             log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
             return 3
+        EventTypeId = getEventTypeId(session,"AvailablePostfix")
+        thisMapping = qryMapping.one()
         thisEventSession = qrySession.one()
-        
+        imageEvent = recastdb.ImageEvent(
+                fkSession = thisEventSession.id,
+                fkImageUuidMapping = thisMapping.id,
+                fkType = EventTypeId,
+                created = datetime.datetime.utcnow()
+            )
+        session.add(imageEvent)
+        session.commit()
         return 0
 
     def fuctExpirePrefix(self):
@@ -310,8 +340,17 @@ class handler():
         if countSession != 1:
             log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
             return 3
+        EventTypeId = getEventTypeId(session,"ExpirePrefix")
+        thisMapping = qryMapping.one()
         thisEventSession = qrySession.one()
-        
+        imageEvent = recastdb.ImageEvent(
+                fkSession = thisEventSession.id,
+                fkImageUuidMapping = thisMapping.id,
+                fkType = EventTypeId,
+                created = datetime.datetime.utcnow()
+            )
+        session.add(imageEvent)
+        session.commit()
         return 0
 
     def fuctExpirePostfix(self):
@@ -343,9 +382,17 @@ class handler():
         if countSession != 1:
             log.error("Session %s has not started" % (NeededEvents["VMCATCHER_EVENT_UUID_SESSION"]))
             return 3
+        EventTypeId = getEventTypeId(session,"ExpirePostfix")
+        thisMapping = qryMapping.one()
         thisEventSession = qrySession.one()
-        
-        
+        imageEvent = recastdb.ImageEvent(
+                fkSession = thisEventSession.id,
+                fkImageUuidMapping = thisMapping.id,
+                fkType = EventTypeId,
+                created = datetime.datetime.utcnow()
+            )
+        session.add(imageEvent)
+        session.commit()
         return 0
 
 
@@ -394,7 +441,11 @@ class handler():
         thisEventSession = qrySession.one()
         #now = datetime.datetime.utcnow()
         #runtime = (now - thisEventSession.created)
-        print thisEventSession.id
+        qrySessionEvents = session.query(recastdb.ImageEvent).\
+            filter(recastdb.ImageEvent.fkSession == thisEventSession.id)
+        for item in qrySessionEvents:
+            print item
+            session.delete(item)
         session.delete(thisEventSession)
         session.commit()
         return 0
@@ -414,7 +465,9 @@ class admin():
         mapImageSrcUuid = kwargs.get('mapImageSrcUuid', None)
         session = self.SessionFactory()
         qryImageUuidMapping = session.query(recastdb.ImageUuidMapping).\
-            filter(recastdb.ImageUuidMapping.imageUuidDest == mapImageDstUuid)
+            filter(recastdb.ImageUuidMapping.imageUuidDest == mapImageDstUuid).\
+            filter(recastdb.ImageUuidMapping.imageUuidSrc == mapImageSrcUuid).\
+            filter(recastdb.ImageUuidMapping.imagelistUuidDest == mapImageListDstUuid)
         if 0 != qryImageUuidMapping.count():
             log.error("Map already exists %s" % (qryImageUuidMapping.one()))
             return 3
@@ -618,7 +671,7 @@ def main():
     adminObj.initDb()
     
     if "map_add" in actions:
-        rc = adminObj.add_map(mapImageDstUuid = mapImageDstUuid,
+        rc = adminObj.map_add(mapImageDstUuid = mapImageDstUuid,
             mapImageListDstUuid = mapImageListDstUuid,
             mapImageSrcUuid = mapImageSrcUuid,
         )

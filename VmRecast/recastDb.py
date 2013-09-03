@@ -29,8 +29,9 @@ class ImageUuidMapping(Base):
     __tablename__ = 'mapping'
     id = Column(Integer, primary_key=True)
     imageUuidSrc = Column(String(100),nullable = False)
-    imageUuidDest = Column(String(100),nullable = False,unique=True)
+    imageUuidDest = Column(String(100),nullable = False)
     imagelistUuidDest = Column(String(100))
+    UniqueConstraint('imageUuidSrc', 'imageUuidDest', 'imagelistUuidDest', name='uniqueMapping')
     def __init__(self, *args, **kwargs):
         self.imageUuidSrc = kwargs.get('imageUuidSrc', None)
         self.imageUuidDest = kwargs.get('imageUuidDest', None)

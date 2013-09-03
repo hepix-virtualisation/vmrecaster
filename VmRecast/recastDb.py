@@ -52,19 +52,30 @@ class Session(Base):
         return "<Session('%s','%s')>" % (self.uuid,self.created)
     
 
+class EventType(Base):
+    __tablename__ = 'event_type'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100),nullable = False,unique=True)
+    def __init__(self,*args, **kwargs):
+        self.name = kwargs.get('name', None)
+    def __repr__(self):
+        return "<EventType('%s')>" % (self.name)
+
 
 class ImageEvent(Base):
     __tablename__ = 'image_event'
     id = Column(Integer, primary_key=True)
-    fkSession = Column(Integer, ForeignKey(Session.id, onupdate="CASCADE", ondelete="CASCADE"))
-    fkImageUuidMapping = Column(Integer, ForeignKey(ImageUuidMapping.id, onupdate="CASCADE", ondelete="CASCADE"))
+    fkSession = Column(Integer, ForeignKey(Session.id, onupdate="CASCADE", ondelete="CASCADE"),nullable = False)
+    fkImageUuidMapping = Column(Integer, ForeignKey(ImageUuidMapping.id, onupdate="CASCADE", ondelete="CASCADE"),nullable = False)
+    fkType = Column(Integer, ForeignKey(EventType.id, onupdate="CASCADE", ondelete="CASCADE"),nullable = False)
     created = Column(DateTime,nullable = False)
-    def __init__(self,imagelist,key,value):
-        self.fkEndorser = imagelist
-        self.key = key
-        self.value = value
+    def __init__(self,*args, **kwargs):
+        self.fkSession = kwargs.get('fkSession', None)
+        self.fkImageUuidMapping = kwargs.get('fkImageUuidMapping', None)
+        self.fkType = kwargs.get('fkType', None)
+        self.created = kwargs.get('created', None)
     def __repr__(self):
-        return "<ImageEvent('%s','%s', '%s')>" % (self.fkEndorser, self.key, self.value)
+        return "<ImageEvent('%s','%s','%s','%s')>" % (self.fkSession, self.fkImageUuidMapping, self.fkType,self.created)
 
 
 

@@ -194,7 +194,17 @@ def handleEvent():
             myfile.write('\n')
 
 
-def vmcasterUploadImage(a,b,c,d):
+def vmcasterUploadImage(srcImage,image):
+    log = logging.getLogger("vmcasterUploadImage")
+    cacheDirKey = 'VMCATCHER_CACHE_DIR_CACHE'
+    if not cacheDirKey in os.environ.keys():
+        log.error("no %s in enviroment" % cacheDirKey)
+        return 81
+    cacheDir = os.environ[cacheDirKey]
+    filelist = []
+    for fileName in os.listdir(cacheDir):
+        log.info(fileName)
+        filelist.append(fileName)
     srcImageLen = len(srcImage)
     matchingFileName = None
     for fileName in filelist:
@@ -208,7 +218,13 @@ def vmcasterUploadImage(a,b,c,d):
     cmd = "vmcaster --select-image '%s' --upload-image '%s'" % (image,fullpath)
     log.debug("running command:%s" % (cmd))
     rc,stdout,stderr = runcommand(cmd)
-    
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return 82
+    return 0
+
 def vmcasterUploadImageList(a):
     pass
 
@@ -254,8 +270,20 @@ def vmcasterIsLinked(imagelist,image):
         log.error("stdout:%s" % (stdout))
         log.error("stderr:%s" % (stderr))
         return None
-    # We shoudl pass the JSON
-    return None
+    # We should pass the JSON
+    parsedData = json.loads(stdout)
+    if not "hv:imagelist" in parsedData.keys():
+        log.error("Invalid json data:%s" % (parsedData))
+        return None
+    if not "hv:images" in parsedData["hv:imagelist"].keys():
+        log.error("Invalid json data in 'hv:imagelist':%s" % (parsedData['hv:imagelist']))
+        return None
+        
+    for image in parsedData["hv:imagelist"]["hv:images"]:
+        if "dc:identifier" in image.keys():
+            if image["dc:identifier"] == image:
+                return True
+    return False
 
 def vmcasterLink(imagelist,image):
     log = logging.getLogger("vmcasterLink")
@@ -265,13 +293,14 @@ def vmcasterLink(imagelist,image):
     if rc == True:
         return True
     # Now we know we need to link
-    cmd = "vmcaster --select-image '%s' --select-imagelist '%s' --imagelist-add-image" % (imagelist)
+    cmd = "vmcaster --select-image '%s' --select-imagelist '%s' --imagelist-add-image" % (image,imagelist)
     rc,stdout,stderr = runcommand(cmd)
     if rc != 0:
         log.error("cmd '%s' failed with '%s'" % (cmd,rc))
         log.error("stdout:%s" % (stdout))
         log.error("stderr:%s" % (stderr))
         return None
+    return True
     
     
 def vmcasterUnlink(imagelist,image):
@@ -282,31 +311,23 @@ def vmcasterUnlink(imagelist,image):
     if rc == False:
         return True
     # Now we know we need to unlink
-    cmd = "vmcaster --select-image '%s' --select-imagelist '%s' --imagelist-del-image" % (imagelist)
+    cmd = "vmcaster --select-image '%s' --select-imagelist '%s' --imagelist-del-image" % (image,imagelist)
     rc,stdout,stderr = runcommand(cmd)
     if rc != 0:
         log.error("cmd '%s' failed with '%s'" % (cmd,rc))
         log.error("stdout:%s" % (stdout))
         log.error("stderr:%s" % (stderr))
         return None
-    
+    return True
 
 
 def processImageInImagelistUpdate(imagelist, image, data):
     log = logging.getLogger("processImageInImagelistUpdate")
     log.debug( "results=%s" % (data))
-    cacheDirKey = 'VMCATCHER_CACHE_DIR_CACHE'
-    if not cacheDirKey in os.environ.keys():
-        log.error("no %s in enviroment" % cacheDirKey)
-        return 21
+    
     lenSrcImage = len(data.keys())
     if lenSrcImage > 1:
         log.error("image %s in imagelist %s has %s trying to update so picking one at random." % (image,imagelist,data.keys()))
-    filelist = []
-    cacheDir = os.environ[cacheDirKey]
-    for fileName in os.listdir(cacheDir):
-        log.info(fileName)
-        filelist.append(fileName)
     output = 0
     for srcImage in data.keys():
         actions = data[srcImage]
@@ -328,8 +349,22 @@ def processImageInImagelistUpdate(imagelist, image, data):
             shouldExpire = False
         log.error("Actions needed shouldExpire=%s,shouldUpload=%s." % (shouldExpire,shouldUpload))
         if shouldExpire == True:
-            rc = vmcasterUnlink()
-            
+            rc = vmcasterUnlink(imagelist,image)
+            if rc != True:
+                log.error("Failed to unlink imagelist='%s' image='%s'." % (imagelist,image))
+                output = 22
+                continue
+        if shouldUpload == True:
+            rc = vmcasterLink(imagelist,image)
+            if rc != True:
+                log.error("Failed to link imagelist='%s' image='%s'." % (imagelist,image))
+                output = 23
+                continue
+            rc = vmcasterUploadImage(srcImage,image)
+            if rc != 0:
+                log.error("Failed to upload image in imagelist='%s' image='%s'." % (imagelist,image))
+                output = 23
+                continue
     return 0
     
         
@@ -354,6 +389,7 @@ def processImageListUpdate(imagelist, data):
         if rc != 0:
             output = rc
     # Now we update the imagelist.
+    vmcasterUploadImageList(imagelist)
     return output
     
 

@@ -441,13 +441,46 @@ class handler():
         thisEventSession = qrySession.one()
         #now = datetime.datetime.utcnow()
         #runtime = (now - thisEventSession.created)
-        qrySessionEvents = session.query(recastdb.ImageEvent).\
-            filter(recastdb.ImageEvent.fkSession == thisEventSession.id)
-        for item in qrySessionEvents:
-            print item
+        qrySessionEvents = session.query(
+                recastdb.ImageEvent,
+                recastdb.EventType.name,
+                recastdb.ImageUuidMapping.imageUuidSrc,
+                recastdb.ImageUuidMapping.imageUuidDest,
+                recastdb.ImageUuidMapping.imagelistUuidDest
+            ).\
+            filter(recastdb.ImageEvent.fkSession == thisEventSession.id).\
+            filter(recastdb.ImageEvent.fkImageUuidMapping == recastdb.ImageUuidMapping.id).\
+            filter(recastdb.ImageEvent.fkType == recastdb.EventType.id)
+        results = {}
+        for row in qrySessionEvents:
+            item = row[0]
+            eventName = row[1]
+            imageSrcId = row[2]
+            imageUuidDest = row[3]
+            imagelistUuidDest = row[4]
+            if not imagelistUuidDest in results.keys():
+                results[imagelistUuidDest] = {}
+            if not imageUuidDest in results[imagelistUuidDest].keys():
+                results[imagelistUuidDest][imageUuidDest] = {}
+            if not imageSrcId in results[imagelistUuidDest][imageUuidDest].keys():
+                results[imagelistUuidDest][imageUuidDest][imageSrcId] = set([])
+            if not eventName in results[imagelistUuidDest][imageUuidDest][imageSrcId]:
+                results[imagelistUuidDest][imageUuidDest][imageSrcId].add(eventName)
+            
+            
+            log.info( "eventName=%s,imageSrcId=%s,imageUuidDest=%s,imagelistUuidDest=%s" % 
+                    (
+                        eventName,
+                        imageSrcId,
+                        imageUuidDest,
+                        imagelistUuidDest,
+                    )
+                )
+            
             session.delete(item)
         session.delete(thisEventSession)
         session.commit()
+        log.info( "results=%s" % (results))
         return 0
 class admin():
 
@@ -648,7 +681,7 @@ def main():
         processor.databaseConnectionString = databaseConnectionString
         rc = functionDict[eventType]()
 
-        log.debug("return code=%s" % (rc))
+        log.debug("version=%s return code=%s" % (version, rc))
         return rc
     
     if "map" in requiredParams:

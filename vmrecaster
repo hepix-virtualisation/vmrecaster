@@ -193,18 +193,120 @@ def handleEvent():
             myfile.write(output)
             myfile.write('\n')
 
+
+def vmcasterUploadImage(a,b,c,d):
+    srcImageLen = len(srcImage)
+    matchingFileName = None
+    for fileName in filelist:
+        fileNamePrefix = fileName[:srcImageLen]
+        log.debug("prefix:%s" % (fileNamePrefix))
+        if fileNamePrefix == srcImage:
+            matchingFileName = fileName
+    if matchingFileName == None:
+        log.error("Could not find a file matching src image %s for image %s in imagelist %s." % (srcImage,image,imagelist))
+    fullpath = "%s/%s" % (cacheDir,matchingFileName)
+    cmd = "vmcaster --select-image '%s' --upload-image '%s'" % (image,fullpath)
+    log.debug("running command:%s" % (cmd))
+    rc,stdout,stderr = runcommand(cmd)
+    
+def vmcasterUploadImageList(a):
+    pass
+
+def vmcasterCheckImageExists(image):
+    log = logging.getLogger("vmcasterCheckImageExists")
+    cmd = "vmcaster --list-image"
+    log.debug("Attempting '%s'" % (cmd))
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return None
+    for line in stdout.split('\n'):
+        stripedLine = line.strip()
+        if stripedLine == image:
+            return True
+    return False
+        
+    
+def vmcasterCheckImageListExists(image):
+    log = logging.getLogger("vmcasterCheckImageListExists")
+    cmd = "vmcaster --list-imagelist"
+    log.info("Attempting '%s'" % (cmd))
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return None
+    for line in stdout.split('\n'):
+        stripedLine = line.strip()
+        if stripedLine == image:
+            return True
+    return False
+
+def vmcasterLink(imagelist,image):
+    pass
+
+
+def vmcasterUnlink(imagelist,image):
+    pass
+
+
 def processImageInImagelistUpdate(imagelist, image, data):
     log = logging.getLogger("processImageInImagelistUpdate")
     log.debug( "results=%s" % (data))
+    cacheDirKey = 'VMCATCHER_CACHE_DIR_CACHE'
+    if not cacheDirKey in os.environ.keys():
+        log.error("no %s in enviroment" % cacheDirKey)
+        return 21
+    lenSrcImage = len(data.keys())
+    if lenSrcImage > 1:
+        log.error("image %s in imagelist %s has %s trying to update so picking one at random." % (image,imagelist,data.keys()))
+    filelist = []
+    cacheDir = os.environ[cacheDirKey]
+    for fileName in os.listdir(cacheDir):
+        log.info(fileName)
+        filelist.append(fileName)
+    output = 0
+    for srcImage in data.keys():
+        actions = data[srcImage]
+        shouldUpload = False
+        shouldExpire = False
+        if "AvailablePrefix" in actions:
+            if "AvailablePostfix" in actions:
+                shouldUpload = True
+            else:
+                log.error("Event 'AvailablePostfix' is missing for image %s in imagelist %s from source image %s." % (image,imagelist,srcImage))
+                shouldUpload = False
+        if "ExpirePrefix" in actions:
+            if "ExpirePostfix" in actions:
+                shouldExpire = True
+            else:
+                log.error("Event 'ExpirePostfix' is missing for image %s in imagelist %s from source image %s." % (image,imagelist,srcImage))
+                shouldExpire = True
+        if shouldExpire == True and shouldUpload == True:
+            shouldExpire = False
+        log.error("Actions needed shouldExpire=%s,shouldUpload=%s." % (shouldExpire,shouldUpload))
+        
+    return 0
+    
+        
     
 
 def processImageListUpdate(imagelist, data):
     log = logging.getLogger("processImageUpdate")
     log.debug( "results=%s" % (data))
-    numberOfImagelists = len(data.keys())
-    if numberOfImagelists == 0:
+    numberOfDestImage = len(data.keys())
+    if numberOfDestImage == 0:
         log.error( "imagelist '%s' has no images to update" % (imagelist))
         return 10
+    imageListExists = vmcasterCheckImageListExists(imagelist)
+    if imageListExists == None:
+        return 11
+    if imageListExists != True:
+        log.error( "imagelist '%s' is not configured in vmcaster" % (imagelist))
+        return 0
     output = 0
     for image in data.keys():
         rc = processImageInImagelistUpdate(imagelist,image,data[image])

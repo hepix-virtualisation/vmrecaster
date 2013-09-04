@@ -245,12 +245,51 @@ def vmcasterCheckImageListExists(image):
             return True
     return False
 
+def vmcasterIsLinked(imagelist,image):
+    log = logging.getLogger("vmcasterIsLinked")
+    cmd = "vmcaster --show-imagelist --select-imagelist %s" % (imagelist)
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return None
+    # We shoudl pass the JSON
+    return None
+
 def vmcasterLink(imagelist,image):
-    pass
-
-
+    log = logging.getLogger("vmcasterLink")
+    rc = vmcasterIsLinked(imagelist,image)
+    if rc == None:
+        return False
+    if rc == True:
+        return True
+    # Now we know we need to link
+    cmd = "vmcaster --select-image '%s' --select-imagelist '%s' --imagelist-add-image" % (imagelist)
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return None
+    
+    
 def vmcasterUnlink(imagelist,image):
-    pass
+    log = logging.getLogger("vmcasterUnlink")
+    rc = vmcasterIsLinked(imagelist,image)
+    if rc == None:
+        return False
+    if rc == False:
+        return True
+    # Now we know we need to unlink
+    cmd = "vmcaster --select-image '%s' --select-imagelist '%s' --imagelist-del-image" % (imagelist)
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return None
+    
 
 
 def processImageInImagelistUpdate(imagelist, image, data):
@@ -288,7 +327,9 @@ def processImageInImagelistUpdate(imagelist, image, data):
         if shouldExpire == True and shouldUpload == True:
             shouldExpire = False
         log.error("Actions needed shouldExpire=%s,shouldUpload=%s." % (shouldExpire,shouldUpload))
-        
+        if shouldExpire == True:
+            rc = vmcasterUnlink()
+            
     return 0
     
         

@@ -193,6 +193,40 @@ def handleEvent():
             myfile.write(output)
             myfile.write('\n')
 
+def processImageInImagelistUpdate(imagelist, image, data):
+    log = logging.getLogger("processImageInImagelistUpdate")
+    log.debug( "results=%s" % (data))
+    
+
+def processImageListUpdate(imagelist, data):
+    log = logging.getLogger("processImageUpdate")
+    log.debug( "results=%s" % (data))
+    numberOfImagelists = len(data.keys())
+    if numberOfImagelists == 0:
+        log.error( "imagelist '%s' has no images to update" % (imagelist))
+        return 10
+    output = 0
+    for image in data.keys():
+        rc = processImageInImagelistUpdate(imagelist,image,data[image])
+        if rc != 0:
+            output = rc
+    # Now we update the imagelist.
+    return output
+    
+
+
+def processEvents(data):
+    log = logging.getLogger("processEvents")
+    log.debug( "results=%s" % (data))
+    if len(data.keys()) == 0:
+        log.debug( "No updates")
+        return 0
+    output = 0
+    for imagelist in data.keys():
+        rc = processImageListUpdate(imagelist,data[imagelist])
+        if rc != 0:
+            output = rc
+    return 0
 
 def checkEnvToDict(RequiredEnv):
     log = logging.getLogger("minenv")
@@ -480,8 +514,8 @@ class handler():
             session.delete(item)
         session.delete(thisEventSession)
         session.commit()
-        log.info( "results=%s" % (results))
-        return 0
+        return processEvents(results)
+
 class admin():
 
     def initDb(self):

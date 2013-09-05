@@ -24,6 +24,14 @@ The database vmrecaster uses is set by the enviroment variable
     VMRECASTER_RDBMS=sqlite:////path/to/your/vmrecast.db
 
 
+To add a mapping from one image to anouther you must specifiy the source image,
+the destination mapped image, and the imagelist to add and remove the image.
+
+    vmrecaster --add-map \
+        --map f145e218-cf72-4b47-b56c-35ef1066eca0 \ 
+        --list ad200a6f-fbf1-476a-a932-a67950eda825 \
+        --src  aa42ca85-179b-4873-b12e-32d549bf02b6  
+
 
 
 Example cron entry:

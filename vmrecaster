@@ -892,14 +892,13 @@ def main():
         log.debug("VMCATCHER_EVENT_TYPE=%s" % (eventType))
         processor = handler()
         functionDict = {
-            "AvailablePrefix" : processor.fuctAvailablePrefix,
-            "AvailablePrefix" : processor.fuctAvailablePrefix,
-            "ExpirePrefix" : processor.fuctExpirePrefix,
-            "ProcessPrefix" : processor.fuctProcessPrefix,
             "AvailablePostfix" : processor.fuctAvailablePostfix,
-            "ProcessPostfix" : processor.fuctProcessPostfix,
-            "ExpirePostfix" : processor.fuctExpirePostfix,
+            "AvailablePrefix" : processor.fuctAvailablePrefix,
             "ExpirePosfix" : processor.fuctExpirePostfix,
+            "ExpirePostfix" : processor.fuctExpirePostfix,
+            "ExpirePrefix" : processor.fuctExpirePrefix,
+            "ProcessPostfix" : processor.fuctProcessPostfix,
+            "ProcessPrefix" : processor.fuctProcessPrefix,
         }
         processor.databaseConnectionString = databaseConnectionString
         rc = functionDict[eventType]()

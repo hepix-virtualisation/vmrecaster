@@ -225,8 +225,18 @@ def vmcasterUploadImage(srcImage,image):
         return 82
     return 0
 
-def vmcasterUploadImageList(a):
-    pass
+def vmcasterUploadImageList(imagelist):
+    log = logging.getLogger("vmcasterUploadImageList")
+    cmd = "vmcaster --select-imagelist '%s' --upload-imagelist" % (imagelist)
+    log.debug("running command:%s" % (cmd))
+    rc,stdout,stderr = runcommand(cmd)
+    if rc != 0:
+        log.error("cmd '%s' failed with '%s'" % (cmd,rc))
+        log.error("stdout:%s" % (stdout))
+        log.error("stderr:%s" % (stderr))
+        return 91
+    return 0
+    
 
 def vmcasterCheckImageExists(image):
     log = logging.getLogger("vmcasterCheckImageExists")
@@ -347,7 +357,7 @@ def processImageInImagelistUpdate(imagelist, image, data):
                 shouldExpire = True
         if shouldExpire == True and shouldUpload == True:
             shouldExpire = False
-        log.error("Actions needed shouldExpire=%s,shouldUpload=%s." % (shouldExpire,shouldUpload))
+        log.debug("Actions needed shouldExpire=%s,shouldUpload=%s." % (shouldExpire,shouldUpload))
         if shouldExpire == True:
             rc = vmcasterUnlink(imagelist,image)
             if rc != True:

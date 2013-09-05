@@ -1,0 +1,65 @@
+vmrecaster is a handler for vmcatcher.
+
+Its perpose is to recast form one or more imagelists one or more images to one or more imagelists.
+
+To simplify the process of uploading imagelists this application depends on vmcaster.
+
+Setup
+~~~~~
+
+Setting up vmrecaster is competed in three stages:
+
+ * Set up vmcatcher to subscribe to the images you wish to republish.
+ * Setup vmcaster to publish the new images you want.
+ * Configure vmrecaster for the images you want to republish.
+
+Configuring vmcatcher and vmcaster is beyond the scope of this document.
+
+Confiuring vmrecaster
+
+vmrecaster stores all its configuration in its database. 
+
+The database vmrecaster uses is set by the enviroment variable
+
+    VMRECASTER_RDBMS=sqlite:////path/to/your/vmrecast.db
+
+
+
+
+Example cron entry:
+~~~~~~~~~~~~~~~~~~
+    PATH=/sbin:/bin:/usr/sbin:/usr/bin
+    VMCATCHER_RDBMS=sqlite:////home/recast/vmcatcher.db
+    VMCASTER_RDBMS=sqlite:////home/recast/vmcaster.db
+    VMCATCHER_CACHE_DIR_CACHE=/home/recast/endorsed/
+    VMCATCHER_CACHE_DIR_DOWNLOAD=/home/recast/download/
+    VMCATCHER_CACHE_DIR_EXPIRE=/home/recast/expired/
+    VMRECASTER_RDBMS=sqlite:////home/recast/recast.db
+    VMCATCHER_CACHE_EVENT="python /usr/bin/vmrecaster -vvv 2>> /tmp/vmrecaster.hdlr "
+    22 * * * * /usr/bin/vmcatcher_subscribe  --verbose --verbose --update 2>> /tmp/recastbase.update; /usr/bin/vmcatcher_cache --verbose --verbose 2>> /tmp/recastbase.cache
+
+
+Example of requesting vmrecaster help
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    $ vmrecaster --help
+    Usage: vmrecaster [options]
+
+    Options:
+      --version             show program's version number and exit
+      -h, --help            show this help message and exit
+      -d DATABASE, --database=DATABASE
+                            Database conection string
+      --output_file=OUTPUT_LOGFILE
+                            Output file to log event.
+      --generator=minium    Set the dictionary Generator.
+      --datetime            Add a datetime stamp.
+      -v, --verbose         Change global log level, increasing log output.
+      -q, --quiet           Change global log level, decreasing log output.
+      --logcfg=CFG_LOGFILE  Logfile configuration file.
+      --list-map            add an image mapping.
+      --add-map             add an image mapping.
+      --del-map             delete an image mapping.
+      --map=MAP             select map image
+      --src=SRC             select source image.
+      --list=LIST           select map image list.

@@ -1,8 +1,9 @@
 vmrecaster is a handler for vmcatcher.
 
-Its perpose is to recast form one or more imagelists one or more images to one or more imagelists.
+Its perpose is to recast images from many imagelists to anouther many other imagelists.
 
-To simplify the process of uploading imagelists this application depends on vmcaster.
+This allows you to manage a private imagelist and then select images to 
+be re-broadcast on a second public imagelist.
 
 Setup
 ~~~~~

@@ -1,3 +1,10 @@
+vmrecaster-0.0.7
+
+ * Bug fix for logging configuration.git 
+ * Added VMRECASTER_LOG_CONF to set logging config.
+ * changed paramter --logcfg to --log-config to make identical to vmcatcher.
+ * Improved README
+ 
 vmrecaster_0.0.3
 
  * added listening for VMCATCHER_EVENT_UUID_SESSION 

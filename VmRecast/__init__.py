@@ -17,3 +17,4 @@ def replace_dist(requirement):
             return pkg_resources.require(requirement)
 
 replace_dist("SQLALchemy >= 0.6.3")
+replace_dist("nose >= 1.1.0")

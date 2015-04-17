@@ -1,3 +1,7 @@
+vmrecaster-0.0.8
+
+ * Added an example dummy nose test.
+
 vmrecaster-0.0.7
 
  * Bug fix for logging configuration.git 
@@ -5,7 +9,7 @@ vmrecaster-0.0.7
  * changed paramter --logcfg to --log-config to make identical to vmcatcher.
  * Improved README
  
-vmrecaster_0.0.3
+vmrecaster-0.0.3
 
  * added listening for VMCATCHER_EVENT_UUID_SESSION 
  * short versions of --verbose --quiet

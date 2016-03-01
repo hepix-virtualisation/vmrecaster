@@ -42,9 +42,9 @@ setup(name='vmrecaster',
         'Operating System :: POSIX',
         'Programming Language :: Python',
         ],
-    install_requires=[
-       "vmcatcher",
-        ],
+    #install_requires=[
+    #   "vmcatcher",
+    #    ],
     scripts=['vmrecaster'],
     data_files=[('/usr/share/doc/vmrecaster-%s' % (version),['README','ChangeLog','LICENSE'])],
     tests_require=[
